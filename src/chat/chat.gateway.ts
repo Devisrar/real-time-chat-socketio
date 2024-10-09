@@ -11,7 +11,7 @@ import {
   import { ChatService } from './chat.service';
   import { CreateChatDto } from './dto/create-chat.dto';
   import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
-import { RoomService } from './room.service';
+  import { RoomService } from './room.service';
   
   @WebSocketGateway()
   export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -20,7 +20,7 @@ import { RoomService } from './room.service';
   
     constructor(
       private readonly chatService: ChatService,
-      private readonly roomService: RoomService
+      private readonly roomService: RoomService,
     ) {}
   
     handleConnection(client: Socket) {
@@ -34,7 +34,7 @@ import { RoomService } from './room.service';
     @SubscribeMessage('joinRoom')
     async handleJoinRoom(
       @MessageBody() roomId: string,
-      @ConnectedSocket() client: Socket
+      @ConnectedSocket() client: Socket,
     ) {
       await this.roomService.addUserToRoom(roomId, client.id);
       client.join(roomId);
@@ -44,7 +44,7 @@ import { RoomService } from './room.service';
     @SubscribeMessage('leaveRoom')
     async handleLeaveRoom(
       @MessageBody() roomId: string,
-      @ConnectedSocket() client: Socket
+      @ConnectedSocket() client: Socket,
     ) {
       await this.roomService.removeUserFromRoom(roomId, client.id);
       client.leave(roomId);
@@ -67,10 +67,13 @@ import { RoomService } from './room.service';
     }
   
     @SubscribeMessage('getHistory')
-    async handleGetHistory(@MessageBody() room: string, @ConnectedSocket() client: Socket) {
+    async handleGetHistory(
+      @MessageBody() room: string,
+      @ConnectedSocket() client: Socket,
+    ) {
       try {
         const messages = await this.chatService.getMessageHistory(room);
-        client.emit('messageHistory', messages.reverse()); 
+        client.emit('messageHistory', messages.reverse());
       } catch (error) {
         this.logger.error('Error in handleGetHistory', error.stack);
         client.emit('error', 'Could not fetch message history.');
@@ -78,10 +81,13 @@ import { RoomService } from './room.service';
     }
   
     @SubscribeMessage('typing')
-    handleTyping(@MessageBody() room: string, @ConnectedSocket() client: Socket) {
+    handleTyping(
+      @MessageBody() room: string,
+      @ConnectedSocket() client: Socket,
+    ) {
       client.broadcast.to(room).emit('typing', `${client.id} is typing...`);
     }
-
+  
     @SubscribeMessage('privateMessage')
     handlePrivateMessage(
       @MessageBody() data: { sender: string; recipient: string; message: string },
@@ -95,3 +101,4 @@ import { RoomService } from './room.service';
       }
     }
   }
+  

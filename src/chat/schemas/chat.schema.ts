@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type ChatDocument = Chat & Document;
 
-@Schema({ timestamps: true })  
+@Schema({ timestamps: true })
 export class Chat {
   @Prop({ required: true })
   room: string;
