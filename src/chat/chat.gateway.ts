@@ -11,13 +11,17 @@ import {
   import { ChatService } from './chat.service';
   import { CreateChatDto } from './dto/create-chat.dto';
   import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
+import { RoomService } from './room.service';
   
   @WebSocketGateway()
   export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server;
     private readonly logger = new Logger(ChatGateway.name);
   
-    constructor(private readonly chatService: ChatService) {}
+    constructor(
+      private readonly chatService: ChatService,
+      private readonly roomService: RoomService
+    ) {}
   
     handleConnection(client: Socket) {
       this.logger.log(`Client connected: ${client.id}`);
@@ -28,15 +32,23 @@ import {
     }
   
     @SubscribeMessage('joinRoom')
-    handleJoinRoom(@MessageBody() room: string, @ConnectedSocket() client: Socket) {
-      client.join(room);
-      this.server.to(room).emit('notification', `${client.id} has joined the room.`);
+    async handleJoinRoom(
+      @MessageBody() roomId: string,
+      @ConnectedSocket() client: Socket
+    ) {
+      await this.roomService.addUserToRoom(roomId, client.id);
+      client.join(roomId);
+      this.server.to(roomId).emit('notification', `${client.id} has joined the room.`);
     }
   
     @SubscribeMessage('leaveRoom')
-    handleLeaveRoom(@MessageBody() room: string, @ConnectedSocket() client: Socket) {
-      client.leave(room);
-      this.server.to(room).emit('notification', `${client.id} has left the room.`);
+    async handleLeaveRoom(
+      @MessageBody() roomId: string,
+      @ConnectedSocket() client: Socket
+    ) {
+      await this.roomService.removeUserFromRoom(roomId, client.id);
+      client.leave(roomId);
+      this.server.to(roomId).emit('notification', `${client.id} has left the room.`);
     }
   
     @UsePipes(new ValidationPipe())
@@ -69,5 +81,17 @@ import {
     handleTyping(@MessageBody() room: string, @ConnectedSocket() client: Socket) {
       client.broadcast.to(room).emit('typing', `${client.id} is typing...`);
     }
+
+    @SubscribeMessage('privateMessage')
+    handlePrivateMessage(
+      @MessageBody() data: { sender: string; recipient: string; message: string },
+      @ConnectedSocket() client: Socket,
+    ) {
+      const targetClient = this.server.sockets.sockets.get(data.recipient);
+      if (targetClient) {
+        targetClient.emit('privateMessage', { sender: data.sender, message: data.message });
+      } else {
+        client.emit('error', 'User is not online.');
+      }
+    }
   }
-  

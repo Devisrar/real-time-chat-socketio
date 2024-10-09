@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Chat, ChatDocument } from './schemas/chat.schema';
@@ -15,8 +15,8 @@ export class ChatService {
       const newChat = new this.chatModel(createChatDto);
       return await newChat.save();
     } catch (error) {
-      this.logger.error('Failed to save chat message', error.stack);
-      throw error;
+      this.logger.error(`Failed to save chat message: ${error.message}`, error.stack);
+      throw new HttpException('Error saving message', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -24,12 +24,12 @@ export class ChatService {
     try {
       return await this.chatModel
         .find({ room })
-        .sort({ createdAt: -1 }) 
+        .sort({ createdAt: -1 })
         .limit(10)
         .exec();
     } catch (error) {
       this.logger.error(`Failed to get message history for room: ${room}`, error.stack);
-      throw error;
+      throw new HttpException('Error fetching message history', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

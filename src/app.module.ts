@@ -5,12 +5,9 @@ import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
-    // Load ConfigModule to access .env variables
     ConfigModule.forRoot({
-      isGlobal: true, // Makes the config module global
+      isGlobal: true, 
     }),
-    
-    // Setup MongoDB using Mongoose with URI from .env
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -19,7 +16,7 @@ import { ChatModule } from './chat/chat.module';
       }),
     }),
 
-    ChatModule, // Import the Chat module for our real-time chat application
+    ChatModule,
   ],
 })
 export class AppModule {}
